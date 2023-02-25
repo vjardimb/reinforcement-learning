@@ -10,16 +10,15 @@ LIMITS = [
     [-np.radians(50), -np.radians(50)]
 ]
 
-if __name__ == "__main__":
-
+def train_model():
     env = gym.make("CartPole-v1", render_mode="human")
     env.reset()
 
     Q_table = np.zeros((NO_BINS[0], NO_BINS[1], 2))
 
     for episode in range(10000):
-        current_state, info = env.reset()
-        current_state = discretize_state(current_state[2:], LIMITS, NO_BINS)
+        obs, info = env.reset()
+        current_state = discretize_state(obs[2:], LIMITS, NO_BINS)
 
         done = False
         t = 0
@@ -45,7 +44,35 @@ if __name__ == "__main__":
                 print(f"done in {t} steps - episode no {episode} - score: {score}")
                 break
 
+    np.save("Q_table.npy", Q_table)
+    env.close()
+    return
 
-    # print(Q_table)
+def use_trained_model():
+    env = gym.make("CartPole-v1", render_mode="human")
+    env.reset()
+
+    Q_table = np.load("Q_table.npy")
+
+    for i in range(10):
+        obs, info = env.reset()
+        state = discretize_state(obs[2:], LIMITS, NO_BINS)
+
+        done = False
+        while not done:
+            env.render()
+
+            action = get_opt_action(Q_table, state)
+
+            obs, reward, done, truncated, info = env.step(action)
+            state = discretize_state(obs[2:], LIMITS, NO_BINS)
 
     env.close()
+    return
+
+
+if __name__ == "__main__":
+    try:
+        use_trained_model()
+    except FileNotFoundError:
+        train_model()
